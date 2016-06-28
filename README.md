@@ -37,6 +37,6 @@ print list(users.all())
 For more complex filtering use a `query()` method, which takes "raw query" as an argument (typically plain SQL). 
 
 ```python
-print list(users.query('select * from auth_user where username ilike 'a%' limit 10'))
+print list(users.query("select * from auth_user where username ilike 'a%' limit 10"))
 ```
 
