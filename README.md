@@ -12,8 +12,8 @@ Only properties and column names matters in mapping process.
 
 DAO Manager is very limited. It can add, update and delete record, or do same on object lists.
 
-Reading data is limited to `all()` shortcut which selects all records from the datasource.
-For more complex queries there is a `query()` method which takes "raw query" as an argument (typically plain SQL). 
+Reading data is limited to two methods: `all()` and `query()`.
+The `all()` shortcut selects all records from the datasource, as shown below:
 
 ```python
 
@@ -33,3 +33,10 @@ users = worm.Manager(db, usermapping)
 
 print list(users.all())
 ```
+
+For more complex filtering use a `query()` method, which takes "raw query" as an argument (typically plain SQL). 
+
+```
+print list(users.query('select * from auth_user where username ilike 'a%' limit 10'))
+```
+
