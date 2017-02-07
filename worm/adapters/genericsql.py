@@ -1,3 +1,8 @@
+from ..resultset import ResultSet
+from ..persistence import RelationManager
+from ..mapper import Mapping
+
+
 PARAM_STYLES = {
     'qmark': lambda x: '?',
     'numeric': lambda x: ':%d' % x[0],
@@ -13,6 +18,41 @@ def named_parameters(cols, data):
 
 def sequential_parameters(cols, data):
     return map(lambda x: data[x], cols)
+
+
+class CursorFetchall(object):
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def __iter__(self):
+        return iter(self._cursor.fetchall())
+
+
+def row_factory(db, source, row, mapping, obj_class):
+    obj = obj_class()
+
+    if not mapping:
+        mapping = Mapping(mapping=dict(zip(row.keys(), row.keys())))
+
+    mapping.row_to_object(row, obj)
+    obj.__mapping = mapping
+
+    for prop_name, relation in mapping.relations():
+        query = relation.query
+
+        if not query:
+            query = 'select * from %%(table)s where %%(rel_column)s=%%%%(%s)s'
+            query = query % mapping.simple_pk()
+
+        ctx = {'rel_column': relation.column}
+
+        rel_manager = RelationManager(
+            query=query, query_args=row, ctx=ctx, database=db,
+            mapping=relation.mapping, model=relation.model)
+
+        setattr(obj, prop_name, rel_manager)
+
+    return obj
 
 
 class GenericSQLAdapter(object):
@@ -33,6 +73,7 @@ class GenericSQLAdapter(object):
     def insert(self, mapping, obj):
         """Inserts the `obj` instance into database"""
 
+        mapping = getattr(obj, '__mapping', None) or mapping
         data = mapping.object_to_dict(obj)
         cols = mapping.data_columns()
 
@@ -49,6 +90,7 @@ class GenericSQLAdapter(object):
     def update(self, mapping, obj):
         """Updates the `obj` instance state in the database"""
 
+        mapping = getattr(obj, '__mapping', None) or mapping
         data = mapping.object_to_dict(obj)
         cols = mapping.data_columns()
 
@@ -85,23 +127,27 @@ class GenericSQLAdapter(object):
 
         return self.raw(sql, mapping, obj_class)
 
-    def raw(self, sql, mapping, obj_class):
+    def raw(self, sql, mapping, obj_class, query_args=None, extra_ctx=None):
         """
         Instantiate objects of `obj_class` using `mapping`
         from raw `sql`
         """
-
         cur = self.cursor()
-        ctx = {
-                'table': mapping.db_table,
-                }
-        cur.execute(sql % ctx)
+        ctx = {}
+        ctx.update(extra_ctx or {})
 
-        res = cur.fetchall()
+        if mapping:
+            ctx.update({
+                    'table': mapping.db_table,
+                    })
 
-        for row in res:
-            obj = obj_class()
-            yield mapping.row_to_object(row, obj)
+        cur.execute(sql % ctx, query_args)
+        source = CursorFetchall(cur)
+
+        return ResultSet(
+                source=source, mapping=mapping,
+                row_factory=lambda row: row_factory(
+                    self, source, row, mapping, obj_class))
 
     def connect(self):
         self._connection = self._db.connect(**self._connection_opts)

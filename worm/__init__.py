@@ -1,5 +1,6 @@
 from .persistence import Manager  # NOQA
 from .mapper import Mapping  # NOQA
+from .workspace import workspace  # NOQA
 from . import engines  # NOQA
 
 

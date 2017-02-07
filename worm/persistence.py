@@ -16,48 +16,83 @@ class GenericObject(object):
 
 
 class Manager(object):
-    def __init__(self, adapter, mapping, model=GenericObject):
-        self._adapter = adapter
+    def __init__(self, database, mapping=None, model=GenericObject):
+        self._database = database
         self._mapping = mapping
         self.model = model
 
     @property
     def database(self):
-        return self._adapter
+        return self._database
 
     @property
     def mapping(self):
         return self._mapping
 
     def begin(self):
-        self._adapter.start_transaction()
+        self._database.start_transaction()
 
     def commit(self):
-        self._adapter.commit_transaction()
+        self._database.commit_transaction()
 
     def rollback(self):
-        self._adapter.rollback_transaction()
+        self._database.rollback_transaction()
 
     def add(self, obj):
-        self._adapter.insert(self._mapping, obj)
+        self._database.insert(self._mapping, obj)
 
     def add_many(self, objs):
-        self._adapter.insert_many(self._mapping, objs)
+        self._database.insert_many(self._mapping, objs)
 
     def update(self, obj):
-        self._adapter.update(self._mapping, obj)
+        self._database.update(self._mapping, obj)
 
     def update_many(self, objs):
-        self._adapter.update_many(self._mapping, objs)
+        self._database.update_many(self._mapping, objs)
 
     def delete(self, obj):
-        self._adapter.delete(self._mapping, obj)
+        self._database.delete(self._mapping, obj)
 
-    def elete_many(self, obj):
-        self._adapter.delete_many(self._mapping, obj)
+    def delete_many(self, obj):
+        self._database.delete_many(self._mapping, obj)
 
     def all(self):
-        return self._adapter.select_all(self._mapping, self.model)
+        return self._database.select_all(self._mapping, self.model)
 
-    def query(self, sql):
-        return self._adapter.raw(sql, self._mapping, self.model)
+    def query(self, sql, query_args=None):
+        return self._database.raw(sql, self._mapping, self.model, query_args)
+
+    def clone(self, database=None, mapping=None, model=None):
+        database = database or self._database
+        mapping = mapping or self._mapping
+        model = model or self.model
+        return type(self)(database=database, mapping=mapping, model=model)
+
+    # shortcuts
+
+    def values(self, *args, **kw):
+        return self.all().values(*args, **kw)
+
+    def values_list(self, *args, **kw):
+        return self.all().values_list(*args, **kw)
+
+    def values_flat(self, *args, **kw):
+        return self.all().values_flat(*args, **kw)
+
+    def count(self, *args, **kw):
+        return self.all().count(*args, **kw)
+
+
+class RelationManager(Manager):
+    def __init__(self, query, query_args, ctx, *args, **kw):
+        self._rel_query = query
+        self._rel_ctx = ctx
+        self._rel_query_args = query_args
+        super(RelationManager, self).__init__(*args, **kw)
+
+    def all(self):
+        return self.query(self._rel_query, self._rel_query_args)
+
+    def query(self, sql, query_args=None):
+        return self._database.raw(
+                sql, self._mapping, self.model, query_args, self._rel_ctx)
