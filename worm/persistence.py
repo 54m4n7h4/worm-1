@@ -66,5 +66,5 @@ class Manager(object):
     def all(self):
         return self._adapter.select_all(self._mapping, self.model)
 
-    def query(self, sql):
-        return self._adapter.raw(sql, self._mapping, self.model)
+    def query(self, sql, *args):
+        return self._adapter.raw(sql, self._mapping, self.model, args=args)

@@ -90,17 +90,19 @@ class GenericSQLAdapter(object):
 
         return self.raw(sql, mapping, obj_class)
 
-    def raw(self, sql, mapping, obj_class):
+    def raw(self, sql, mapping, obj_class, args=None):
         """
         Instantiate objects of `obj_class` using `mapping`
         from raw `sql`
         """
 
+        args = args or []
         cur = self.cursor()
         ctx = {
                 'table': mapping.db_table,
                 }
-        cur.execute(sql % ctx)
+        sql = sql.replace('%', '%%')
+        cur.execute(sql % ctx, args)
 
         res = cur.fetchall()
 
