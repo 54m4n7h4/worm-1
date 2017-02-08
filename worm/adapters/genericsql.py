@@ -27,6 +27,11 @@ class GenericSQLAdapter(object):
         else:
             self.create_parameters = sequential_parameters
 
+    def configure_connection(self, **params):
+        if self.is_connected():
+            raise RuntimeError('Connection is estabilished')
+        self._connection_opts = params
+
     def cursor(self):
         return self.connection.cursor()
 
