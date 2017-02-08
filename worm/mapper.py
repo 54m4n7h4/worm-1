@@ -3,6 +3,10 @@ class MappingError(Exception):
     pass
 
 
+class ColumnNotDefined(MappingError):
+    pass
+
+
 class ColumnAlreadyMapped(MappingError):
     pass
 
@@ -13,16 +17,20 @@ class PropertyAlreadyMapped(MappingError):
 
 class Mapping(object):
     def __init__(
-            self, table, mapping=None, primary_key=None):
+            self, table, mapping=None, primary_key=None, scaffold=False):
         self._c2p = {}
         self._p2c = {}
         self._dc = []
         self._tablename = table
-        self._pk = primary_key or []
+        self._pk = []
+        self.scaffold = scaffold
 
         if mapping:
             for columnname, propname in mapping.items():
                 self.add(columnname, propname)
+
+        if primary_key:
+            self.set_primary_key(primary_key)
 
     def add(self, column_name, property_name):
         if column_name in self._c2p:
@@ -64,9 +72,30 @@ class Mapping(object):
     def primary_key(self):
         return self._pk[:]
 
+    def set_primary_key(self, column_names):
+        columns = self.columns()
+        for column_name in column_names:
+            if column_name not in columns:
+                raise ColumnNotDefined(column_name)
+        self._pk = column_names
+        for column_name in self._pk:
+            try:
+                self._dc.remove(column_name)
+            except ValueError:
+                pass
+
     def properties(self):
         return self._p2c.keys()
 
     @property
     def db_table(self):
         return self._tablename
+
+
+def scaffold(adapter, mapping):
+    column_names = adapter._db.table_column_names(
+            adapter, mapping.db_table)
+    pk = adapter._db.table_primary_key(adapter, mapping.db_table)
+    for name in column_names:
+        mapping.add(name, name)
+    mapping.set_primary_key(pk)

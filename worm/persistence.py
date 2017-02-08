@@ -1,3 +1,5 @@
+from . import mapper
+
 
 class QueryException(Exception):
     pass
@@ -17,9 +19,14 @@ class GenericObject(object):
 
 class Manager(object):
     def __init__(self, adapter, mapping, model=GenericObject):
+        if isinstance(mapping, str):
+            mapping = mapper.Mapping(mapping, scaffold=True)
         self._adapter = adapter
         self._mapping = mapping
         self.model = model
+
+        if not mapping.columns() and mapping.scaffold:
+            mapper.scaffold(adapter, mapping)
 
     @property
     def database(self):

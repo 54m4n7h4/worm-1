@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='worm-dao',
-      version='0.1',
+      version='0.1.1',
       description='Worst or wonderful DAO library',
       classifiers=[
         "Development Status :: 2 - Pre-Alpha",
