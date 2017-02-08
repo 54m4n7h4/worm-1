@@ -9,6 +9,9 @@ class Connection(object):
         self.opts = opts
         self.path = path
 
+    def close():
+        pass
+
 
 def connect(path, **opts):
     return Connection(path, **opts)

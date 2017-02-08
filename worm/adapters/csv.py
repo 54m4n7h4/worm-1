@@ -19,3 +19,8 @@ class CSVAdapter(object):
         if not self._connection:
             self._connection = self._db.connect(**self._connection_opts)
         return self._connection
+
+    def close_connection(self):
+        if self._connection:
+            self._connection.close()
+            self._connection = None

@@ -114,6 +114,11 @@ class GenericSQLAdapter(object):
     def is_connected(self):
         return self._connection is not None
 
+    def close_connection(self):
+        if self.is_connected():
+            self._connection.close()
+            self._connection = None
+
     @property
     def connection(self):
         return self._connection if self.is_connected() else self.connect()
